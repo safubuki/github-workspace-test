@@ -17,6 +17,48 @@
 - 合計金額の自動計算
 - テキストファイルでの保存・読み込み
 
+## 環境構築
+
+### 前提条件
+- Python 3.6以上がインストールされていること
+
+### 仮想環境の作成と有効化
+
+#### 1. 仮想環境の作成
+```bash
+python3 -m venv venv
+```
+
+#### 2. 仮想環境の有効化
+
+**Linuxまたはmacの場合:**
+```bash
+source venv/bin/activate
+```
+
+**Windowsの場合:**
+```bash
+venv\Scripts\activate
+```
+
+#### 3. 依存関係のインストール
+```bash
+pip install -r requirements.txt
+```
+
+#### 4. 仮想環境の無効化
+作業完了後、仮想環境を無効化する場合：
+```bash
+deactivate
+```
+
+### 環境構築の確認
+環境が正しく構築されているかを確認：
+```bash
+python3 --version
+python3 -c "import sys; print('Python環境:', sys.executable)"
+```
+
 ## 使用方法
 
 ### アプリケーションの起動
