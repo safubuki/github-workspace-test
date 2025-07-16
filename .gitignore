@@ -75,3 +75,5 @@ Thumbs.db
 
 # Shopping list files (comment out if you want to track example files)
 # *.txt
+shopping_list.json
+demo_shopping_list.*

@@ -5,7 +5,9 @@
 Demo script for Shopping List Manager with Calculator Functionality
 """
 
-from shopping_calculator import Calculator, ShoppingList, ShoppingCalculatorApp
+from calculator import Calculator
+from shopping_list import ShoppingList
+from shopping_calculator import ShoppingCalculatorApp
 
 def run_demo():
     """アプリケーションの機能をデモンストレーション"""
@@ -79,7 +81,7 @@ def run_demo():
     # ファイル保存・読み込みのデモ
     print("\n💾 ファイル操作のデモ")
     print("-" * 30)
-    filename = "demo_shopping_list.txt"
+    filename = "demo_shopping_list.json"
     print(f"  {shopping.save_to_file(filename)}")
     
     # 新しいインスタンスで読み込みテスト
@@ -87,6 +89,10 @@ def run_demo():
     print(f"  {new_shopping.load_from_file(filename)}")
     print(f"  読み込み後のアイテム数: {len(new_shopping.get_items())} (未完了)")
     print(f"  読み込み後の完了済み: {len(new_shopping.get_completed_items())} (完了済み)")
+    
+    # テキスト形式での出力もテスト
+    text_filename = "demo_shopping_list.txt"
+    print(f"  {new_shopping.export_to_text(text_filename)}")
     
     print("\n" + "="*60)
     print("デモが完了しました!")

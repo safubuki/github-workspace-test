@@ -7,194 +7,37 @@ Shopping List Manager with Calculator Functionality
 このアプリケーションは買い物時に便利な機能を提供します：
 - 四則演算（電卓機能）
 - 買い物リストの作成・編集・管理
-- リストの保存・読み込み機能
+- JSONファイルでのリスト永続化
 """
 
 import os
 import sys
-from datetime import datetime
 
-
-class Calculator:
-    """電卓機能を提供するクラス"""
-    
-    def __init__(self):
-        self.history = []
-    
-    def add(self, a, b):
-        """加算"""
-        result = a + b
-        self.history.append(f"{a} + {b} = {result}")
-        return result
-    
-    def subtract(self, a, b):
-        """減算"""
-        result = a - b
-        self.history.append(f"{a} - {b} = {result}")
-        return result
-    
-    def multiply(self, a, b):
-        """乗算"""
-        result = a * b
-        self.history.append(f"{a} × {b} = {result}")
-        return result
-    
-    def divide(self, a, b):
-        """除算"""
-        if b == 0:
-            raise ValueError("ゼロで割ることはできません")
-        result = a / b
-        self.history.append(f"{a} ÷ {b} = {result}")
-        return result
-    
-    def calculate_expression(self, expression):
-        """文字列として与えられた式を計算"""
-        try:
-            # 安全な計算のため、eval()の代わりに基本的な演算子のみ許可
-            expression = expression.replace('×', '*').replace('÷', '/')
-            result = eval(expression)
-            self.history.append(f"{expression} = {result}")
-            return result
-        except:
-            raise ValueError("無効な式です")
-    
-    def get_history(self):
-        """計算履歴を取得"""
-        return self.history.copy()
-    
-    def clear_history(self):
-        """計算履歴をクリア"""
-        self.history.clear()
-
-
-class ShoppingList:
-    """買い物リスト管理機能を提供するクラス"""
-    
-    def __init__(self):
-        self.items = []
-        self.completed_items = []
-    
-    def add_item(self, item, quantity=1, price=None):
-        """アイテムをリストに追加"""
-        item_data = {
-            'name': item,
-            'quantity': quantity,
-            'price': price,
-            'added_date': datetime.now().strftime("%Y-%m-%d %H:%M")
-        }
-        self.items.append(item_data)
-        return f"'{item}'をリストに追加しました"
-    
-    def remove_item(self, index):
-        """指定されたインデックスのアイテムを削除"""
-        if 0 <= index < len(self.items):
-            removed_item = self.items.pop(index)
-            return f"'{removed_item['name']}'をリストから削除しました"
-        else:
-            raise IndexError("無効なアイテム番号です")
-    
-    def complete_item(self, index):
-        """アイテムを完了済みに移動"""
-        if 0 <= index < len(self.items):
-            completed_item = self.items.pop(index)
-            completed_item['completed_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-            self.completed_items.append(completed_item)
-            return f"'{completed_item['name']}'を完了しました"
-        else:
-            raise IndexError("無効なアイテム番号です")
-    
-    def get_items(self):
-        """現在のアイテムリストを取得"""
-        return self.items.copy()
-    
-    def get_completed_items(self):
-        """完了済みアイテムを取得"""
-        return self.completed_items.copy()
-    
-    def calculate_total(self):
-        """価格が設定されているアイテムの合計金額を計算"""
-        total = 0
-        for item in self.items:
-            if item['price']:
-                total += item['price'] * item['quantity']
-        return total
-    
-    def save_to_file(self, filename):
-        """リストをテキストファイルに保存"""
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write("=== 買い物リスト ===\n")
-                f.write(f"作成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-                
-                f.write("【未完了アイテム】\n")
-                for i, item in enumerate(self.items):
-                    price_str = f" - ¥{item['price']}" if item['price'] else ""
-                    f.write(f"{i+1}. {item['name']} (数量: {item['quantity']}){price_str}\n")
-                
-                if self.completed_items:
-                    f.write("\n【完了済みアイテム】\n")
-                    for item in self.completed_items:
-                        price_str = f" - ¥{item['price']}" if item['price'] else ""
-                        f.write(f"✓ {item['name']} (数量: {item['quantity']}){price_str}\n")
-                
-                total = self.calculate_total()
-                if total > 0:
-                    f.write(f"\n合計金額: ¥{total}\n")
-            
-            return f"リストを '{filename}' に保存しました"
-        except Exception as e:
-            raise IOError(f"ファイル保存エラー: {e}")
-    
-    def load_from_file(self, filename):
-        """テキストファイルからリストを読み込み"""
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            
-            self.items.clear()
-            self.completed_items.clear()
-            
-            current_section = None
-            for line in lines:
-                line = line.strip()
-                if line.startswith("【未完了アイテム】"):
-                    current_section = "pending"
-                elif line.startswith("【完了済みアイテム】"):
-                    current_section = "completed"
-                elif line and current_section == "pending" and line[0].isdigit():
-                    # Parse item line: "1. item_name (数量: 2) - ¥100"
-                    parts = line.split(". ", 1)
-                    if len(parts) == 2:
-                        item_text = parts[1]
-                        self.add_item(item_text.split(" (")[0])
-                elif line and current_section == "completed" and line.startswith("✓"):
-                    # Parse completed item
-                    item_text = line[2:].strip()
-                    item_data = {
-                        'name': item_text.split(" (")[0],
-                        'quantity': 1,
-                        'price': None,
-                        'completed_date': datetime.now().strftime("%Y-%m-%d %H:%M")
-                    }
-                    self.completed_items.append(item_data)
-            
-            return f"リストを '{filename}' から読み込みました"
-        except FileNotFoundError:
-            raise FileNotFoundError(f"ファイル '{filename}' が見つかりません")
-        except Exception as e:
-            raise IOError(f"ファイル読み込みエラー: {e}")
+from calculator import Calculator
+from shopping_list import ShoppingList
 
 
 class ShoppingCalculatorApp:
-    """メインアプリケーションクラス"""
+    """メインアプリケーションクラス
+    
+    電卓機能と買い物リスト管理を統合したアプリケーションを提供します。
+    Main application class that integrates calculator and shopping list functionality.
+    """
     
     def __init__(self):
+        """ShoppingCalculatorAppクラスの初期化
+        
+        電卓とショッピングリストのインスタンスを作成し、アプリケーション状態を初期化します。
+        """
         self.calculator = Calculator()
         self.shopping_list = ShoppingList()
         self.running = True
     
     def display_menu(self):
-        """メインメニューを表示"""
+        """メインメニューを表示
+        
+        アプリケーションの主要機能を選択するためのメニューを表示します。
+        """
         print("\n" + "="*50)
         print("    買い物リスト & 電卓アプリケーション")
         print("="*50)
@@ -206,7 +49,10 @@ class ShoppingCalculatorApp:
         print("-"*50)
     
     def calculator_menu(self):
-        """電卓メニューを表示・実行"""
+        """電卓メニューを表示・実行
+        
+        電卓の各種機能（簡単計算、式計算、履歴表示など）のサブメニューを提供します。
+        """
         while True:
             print("\n" + "-"*30)
             print("    電卓機能")
@@ -218,7 +64,7 @@ class ShoppingCalculatorApp:
             print("5. メインメニューに戻る")
             
             try:
-                choice = input("\n選択してください (1-5): ").strip()
+                choice = input("選択してください (1-5): ").strip()
                 
                 if choice == "1":
                     self.simple_calculation()
@@ -227,65 +73,82 @@ class ShoppingCalculatorApp:
                 elif choice == "3":
                     self.show_calculation_history()
                 elif choice == "4":
-                    self.calculator.clear_history()
-                    print("計算履歴をクリアしました")
+                    self.clear_calculation_history()
                 elif choice == "5":
                     break
                 else:
-                    print("無効な選択です")
-            except KeyboardInterrupt:
-                print("\n操作がキャンセルされました")
-                break
+                    print("無効な選択です。1-5の数字を入力してください")
+            except Exception as e:
+                print(f"エラーが発生しました: {e}")
     
     def simple_calculation(self):
-        """簡単な計算を実行"""
+        """簡単計算（2つの数値と演算子）を実行
+        
+        ユーザーから2つの数値と演算子を入力として受け取り、計算を実行します。
+        """
         try:
-            print("\n四則演算を行います")
-            a = float(input("最初の数値を入力: "))
-            operation = input("演算子を入力 (+, -, ×, ÷): ").strip()
-            b = float(input("次の数値を入力: "))
+            num1 = float(input("最初の数値を入力してください: "))
+            operator = input("演算子を入力してください (+, -, ×, ÷): ").strip()
+            num2 = float(input("次の数値を入力してください: "))
             
-            if operation == "+":
-                result = self.calculator.add(a, b)
-            elif operation == "-":
-                result = self.calculator.subtract(a, b)
-            elif operation == "×" or operation == "*":
-                result = self.calculator.multiply(a, b)
-            elif operation == "÷" or operation == "/":
-                result = self.calculator.divide(a, b)
+            if operator == "+":
+                result = self.calculator.add(num1, num2)
+            elif operator == "-":
+                result = self.calculator.subtract(num1, num2)
+            elif operator in ["×", "*"]:
+                result = self.calculator.multiply(num1, num2)
+            elif operator in ["÷", "/"]:
+                result = self.calculator.divide(num1, num2)
             else:
                 print("無効な演算子です")
                 return
             
             print(f"結果: {result}")
         except ValueError as e:
-            print(f"エラー: {e}")
-        except Exception as e:
             print(f"計算エラー: {e}")
+        except Exception as e:
+            print(f"入力エラー: {e}")
     
     def expression_calculation(self):
-        """式を入力して計算"""
+        """式計算（文字列で数式を入力）を実行
+        
+        ユーザーから数式を文字列として受け取り、評価・計算を実行します。
+        """
         try:
-            expression = input("計算式を入力 (例: 100 + 200 * 1.08): ").strip()
+            expression = input("計算式を入力してください (例: 100 + 200 * 1.08): ").strip()
             result = self.calculator.calculate_expression(expression)
             print(f"結果: {result}")
         except ValueError as e:
-            print(f"エラー: {e}")
-        except Exception as e:
             print(f"計算エラー: {e}")
+        except Exception as e:
+            print(f"入力エラー: {e}")
     
     def show_calculation_history(self):
-        """計算履歴を表示"""
+        """計算履歴を表示
+        
+        過去に実行された計算の履歴を一覧表示します。
+        """
         history = self.calculator.get_history()
         if history:
             print("\n=== 計算履歴 ===")
             for i, calc in enumerate(history, 1):
                 print(f"{i}. {calc}")
         else:
-            print("計算履歴はありません")
+            print("計算履歴がありません")
+    
+    def clear_calculation_history(self):
+        """計算履歴をクリア
+        
+        保存されている計算履歴を全て削除します。
+        """
+        self.calculator.clear_history()
+        print("計算履歴をクリアしました")
     
     def shopping_list_menu(self):
-        """買い物リストメニューを表示・実行"""
+        """買い物リストメニューを表示・実行
+        
+        買い物リストの各種操作（追加、削除、完了、表示など）のサブメニューを提供します。
+        """
         while True:
             print("\n" + "-"*30)
             print("    買い物リスト管理")
@@ -294,89 +157,98 @@ class ShoppingCalculatorApp:
             print("2. アイテム削除")
             print("3. アイテム完了")
             print("4. リスト表示")
-            print("5. 合計金額計算")
+            print("5. 合計金額表示")
             print("6. メインメニューに戻る")
             
             try:
-                choice = input("\n選択してください (1-6): ").strip()
+                choice = input("選択してください (1-6): ").strip()
                 
                 if choice == "1":
-                    self.add_item_to_list()
+                    self.add_shopping_item()
                 elif choice == "2":
-                    self.remove_item_from_list()
+                    self.remove_shopping_item()
                 elif choice == "3":
-                    self.complete_item_in_list()
+                    self.complete_shopping_item()
                 elif choice == "4":
                     self.display_shopping_list()
                 elif choice == "5":
-                    self.calculate_total_cost()
+                    self.display_total()
                 elif choice == "6":
                     break
                 else:
-                    print("無効な選択です")
-            except KeyboardInterrupt:
-                print("\n操作がキャンセルされました")
-                break
+                    print("無効な選択です。1-6の数字を入力してください")
+            except Exception as e:
+                print(f"エラーが発生しました: {e}")
     
-    def add_item_to_list(self):
-        """アイテムをリストに追加"""
+    def add_shopping_item(self):
+        """買い物アイテムを追加
+        
+        ユーザーからアイテム名、数量、価格を入力として受け取り、買い物リストに追加します。
+        """
         try:
-            item_name = input("アイテム名を入力: ").strip()
-            if not item_name:
-                print("アイテム名は必須です")
+            name = input("アイテム名を入力してください: ").strip()
+            if not name:
+                print("アイテム名を入力してください")
                 return
             
-            quantity_str = input("数量を入力 (デフォルト: 1): ").strip()
+            quantity_str = input("数量を入力してください (デフォルト: 1): ").strip()
             quantity = int(quantity_str) if quantity_str else 1
             
-            price_str = input("価格を入力 (任意、円): ").strip()
+            price_str = input("価格を入力してください (オプション): ").strip()
             price = float(price_str) if price_str else None
             
-            message = self.shopping_list.add_item(item_name, quantity, price)
+            message = self.shopping_list.add_item(name, quantity, price)
             print(message)
         except ValueError:
-            print("数量または価格の形式が無効です")
+            print("数値の入力が正しくありません")
         except Exception as e:
-            print(f"エラー: {e}")
+            print(f"追加エラー: {e}")
     
-    def remove_item_from_list(self):
-        """アイテムをリストから削除"""
+    def remove_shopping_item(self):
+        """買い物アイテムを削除
+        
+        ユーザーが指定したインデックスのアイテムを買い物リストから削除します。
+        """
         try:
-            self.display_shopping_list()
             items = self.shopping_list.get_items()
             if not items:
-                print("削除するアイテムがありません")
+                print("リストにアイテムがありません")
                 return
             
-            index_str = input("削除するアイテム番号を入力: ").strip()
-            index = int(index_str) - 1
+            self.display_shopping_list()
+            index = int(input("削除するアイテム番号を入力してください: ")) - 1
             message = self.shopping_list.remove_item(index)
             print(message)
         except (ValueError, IndexError) as e:
-            print(f"エラー: {e}")
+            print(f"削除エラー: {e}")
         except Exception as e:
-            print(f"エラー: {e}")
+            print(f"削除エラー: {e}")
     
-    def complete_item_in_list(self):
-        """アイテムを完了済みに移動"""
+    def complete_shopping_item(self):
+        """買い物アイテムを完了
+        
+        ユーザーが指定したアイテムを完了済みリストに移動します。
+        """
         try:
-            self.display_shopping_list()
             items = self.shopping_list.get_items()
             if not items:
-                print("完了するアイテムがありません")
+                print("リストにアイテムがありません")
                 return
             
-            index_str = input("完了するアイテム番号を入力: ").strip()
-            index = int(index_str) - 1
+            self.display_shopping_list()
+            index = int(input("完了するアイテム番号を入力してください: ")) - 1
             message = self.shopping_list.complete_item(index)
             print(message)
         except (ValueError, IndexError) as e:
-            print(f"エラー: {e}")
+            print(f"完了エラー: {e}")
         except Exception as e:
-            print(f"エラー: {e}")
+            print(f"完了エラー: {e}")
     
     def display_shopping_list(self):
-        """買い物リストを表示"""
+        """買い物リストを表示
+        
+        未完了および完了済みのアイテムを整理して表示します。
+        """
         items = self.shopping_list.get_items()
         completed_items = self.shopping_list.get_completed_items()
         
@@ -388,7 +260,7 @@ class ShoppingCalculatorApp:
                 price_str = f" - ¥{item['price']}" if item['price'] else ""
                 print(f"{i}. {item['name']} (数量: {item['quantity']}){price_str}")
         else:
-            print("未完了アイテムはありません")
+            print("【未完了アイテム】\n(なし)")
         
         if completed_items:
             print("\n【完了済みアイテム】")
@@ -396,8 +268,11 @@ class ShoppingCalculatorApp:
                 price_str = f" - ¥{item['price']}" if item['price'] else ""
                 print(f"✓ {item['name']} (数量: {item['quantity']}){price_str}")
     
-    def calculate_total_cost(self):
-        """合計金額を計算・表示"""
+    def display_total(self):
+        """合計金額を計算・表示
+        
+        価格が設定された未完了アイテムの合計金額を計算し表示します。
+        """
         total = self.shopping_list.calculate_total()
         if total > 0:
             print(f"\n価格設定済みアイテムの合計金額: ¥{total}")
@@ -405,11 +280,14 @@ class ShoppingCalculatorApp:
             print("\n価格が設定されたアイテムがありません")
     
     def save_list(self):
-        """リストをファイルに保存"""
+        """リストをファイルに保存
+        
+        ユーザーが指定したファイル名で買い物リストをJSONファイルに保存します。
+        """
         try:
-            filename = input("保存ファイル名を入力 (.txt): ").strip()
-            if not filename.endswith('.txt'):
-                filename += '.txt'
+            filename = input("保存ファイル名を入力 (.json): ").strip()
+            if not filename.endswith('.json'):
+                filename += '.json'
             
             message = self.shopping_list.save_to_file(filename)
             print(message)
@@ -417,7 +295,10 @@ class ShoppingCalculatorApp:
             print(f"保存エラー: {e}")
     
     def load_list(self):
-        """ファイルからリストを読み込み"""
+        """ファイルからリストを読み込み
+        
+        ユーザーが指定したJSONファイルから買い物リストを読み込みます。
+        """
         try:
             filename = input("読み込みファイル名を入力: ").strip()
             message = self.shopping_list.load_from_file(filename)
@@ -426,8 +307,18 @@ class ShoppingCalculatorApp:
             print(f"読み込みエラー: {e}")
     
     def run(self):
-        """アプリケーションのメインループ"""
+        """アプリケーションのメインループ
+        
+        アプリケーションの主要な実行ループを管理し、ユーザーの入力に基づいて
+        適切な機能を呼び出します。
+        """
         print("買い物リスト & 電卓アプリケーションを開始します")
+        
+        # 起動時にショッピングリストの状況を表示
+        items = self.shopping_list.get_items()
+        completed_items = self.shopping_list.get_completed_items()
+        if items or completed_items:
+            print(f"保存されたリストを読み込みました：未完了 {len(items)} 件、完了済み {len(completed_items)} 件")
         
         while self.running:
             try:
@@ -456,7 +347,14 @@ class ShoppingCalculatorApp:
 
 
 def main():
-    """メイン関数"""
+    """メイン関数
+    
+    アプリケーションのエントリーポイント。ShoppingCalculatorAppのインスタンスを
+    作成し、メインループを開始します。
+    
+    Returns:
+        None
+    """
     app = ShoppingCalculatorApp()
     app.run()
 
